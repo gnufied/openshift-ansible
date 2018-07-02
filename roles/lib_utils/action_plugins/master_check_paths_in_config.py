@@ -79,13 +79,13 @@ def walk_mapping(map_to_walk, strings_to_check):
         do_item_check(val, strings_to_check)
 
 
-def check_strings(strings_to_check):
+def check_strings(strings_to_check, allowed_paths):
     """Check the strings we found to see if they look like file paths and if
     they are, fail if not start with /etc/origin/master"""
     for item in strings_to_check:
         if item.startswith('/') or item.startswith('../'):
             matches = 0
-            for allowed in ALLOWED_DIRS:
+            for allowed in allowed_paths:
                 if item.startswith(allowed):
                     matches += 1
             if matches == 0:
@@ -114,6 +114,9 @@ class ActionModule(ActionBase):
         # config yaml file.
         mastercfg = self._task.args.get('mastercfg')
 
+        # get path to flexvolume installation on atomic/immutable hosts
+        atomic_flexvolume_path = self.task_vars.get("openshift_flexvolume_container_directory_default")
+        allowed_paths = ALLOWED_DIRS + [atomic_flexvolume_path]
         # We migrate some paths for users automatically, so we pop those.
         pop_migrated_fields(mastercfg)
 
@@ -123,7 +126,7 @@ class ActionModule(ActionBase):
 
         walk_mapping(mastercfg, strings_to_check)
 
-        check_strings(strings_to_check)
+        check_strings(strings_to_check, allowed_paths)
 
         result["changed"] = False
         result["failed"] = False
